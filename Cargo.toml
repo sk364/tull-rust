@@ -9,6 +9,7 @@ homepage = "https://github.com/sk364/tull-rust"
 repository = "https://github.com/sk364/tull-rust"
 keywords = ["cli", "terminal"]
 categories = ["command-line-utilities"]
+edition = "2018"
 
 [dependencies]
 structopt = "0.3.13"
