@@ -1,7 +1,14 @@
 [package]
 name = "tull-rust"
+authors = ["Sachin Kukreja <sk364@gmail.com>"]
+description = "Teleport Your Logs with Love"
 version = "0.1.0"
-edition = "2018"
+licence = "MIT"
+readme = "README.md"
+homepage = "https://github.com/sk364/tull-rust"
+repository = "https://github.com/sk364/tull-rust"
+keywords = ["cli", "terminal"]
+categories = ["command-line-utilities"]
 
 [dependencies]
 structopt = "0.3.13"
