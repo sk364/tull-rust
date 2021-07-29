@@ -12,7 +12,7 @@ use uuid::Uuid;
 use home::home_dir;
 
 
-#[derive(StructOpt, Debug)]
+#[derive(StructOpt)]
 struct Cli {
     #[structopt(short, long)]
     web: bool,

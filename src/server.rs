@@ -1,15 +1,35 @@
-use serde_derive::Serialize;
-
 use std::path::Path;
 use std::fs;
 use std::net::SocketAddr;
+use std::sync::Arc;
 
 use home::home_dir;
 use warp::Filter;
+use handlebars::Handlebars;
+use serde::Serialize;
+use serde_derive::Serialize;
+use serde_json::json;
 
 #[derive(Serialize)]
 struct JSONResponse {
     data: Vec<String>,
+}
+
+
+struct WithTemplate<T: Serialize> {
+    name: &'static str,
+    value: T,
+}
+
+
+fn render<T>(template: WithTemplate<T>, hbs: Arc<Handlebars>) -> impl warp::Reply
+where
+    T: Serialize,
+{
+    let render = hbs
+        .render(template.name, &template.value)
+        .unwrap_or_else(|err| err.to_string());
+    warp::reply::html(render)
 }
 
 
@@ -21,17 +41,28 @@ pub async fn run_server(socket: SocketAddr) {
         format!("{}/{}", user_home_str, ".tull/data")
     }
 
+    let mut hb = Handlebars::new();
+    hb.register_template_file("session-list.html", "./src/templates/session-list.hbs").unwrap();
+    let hb = Arc::new(hb);
+    let handlebars = move |with_template| render(with_template, hb.clone());
+
     let session_list_web = warp::path!("tull" / "web")
         .map(|| {
             let files = fs::read_dir(get_data_dir_path()).unwrap();
-            let mut s: String = "".to_string();
+            let mut session_ids: Vec<String> = [].to_vec();
+
             for file in files {
                 let file_name = file.unwrap().file_name();
                 let file_name_str = file_name.to_str().unwrap();
-                s.push_str(&format!("<a href='/tull/web/{}'>{}</a><br />", &file_name_str, &file_name_str).to_string());
+                session_ids.push(file_name_str.to_string());
             }
-            warp::reply::html(s)
-        });
+
+            WithTemplate {
+                name: "session-list.html",
+                value: json!({"session_ids": session_ids}),
+            }
+        })
+        .map(handlebars);
 
     let session_logs_web = warp::path!("tull" / "web" / String)
         .map(|session_id| {

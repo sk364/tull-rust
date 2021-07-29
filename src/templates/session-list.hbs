@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+  <html>
+    <head>
+      <title>TULL | Session List</title>
+      <style>
+        body {
+          background-color: #C1CDCD;
+        }
+
+        .container {
+          margin: 100px 550px;
+        }
+
+        .container table {
+          border: 1px solid gray;
+          border-radius: 4px;
+          border-collapse: collapse;
+          width: 700px;
+        }
+
+        .container table th {
+          padding-top: 12px;
+          padding-bottom: 12px;
+          text-align: left;
+          background-color: #2F4F4F;
+          color: white;
+        }
+
+        .container table td, .container table th {
+          border: 1px solid #ddd;
+          padding: 8px;
+        }
+
+        .container table tr:nth-child(even) {
+          background-color: #f2f2f2;
+        }
+
+        .container table tr:nth-child(odd) {
+          background-color: white;
+        }
+
+        .container table tr:hover {
+          background-color: #ddd;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <table>
+          <thead>
+            <tr>
+              <th>Session List</th>
+            </tr>
+          </thead>
+          <tbody>
+            {{#each session_ids as |sid| }}
+              <tr>
+                <td>
+                  <a class="session" href="/tull/web/{{sid}}">{{ sid }}</a>
+                </td>
+              </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+    </body>
+  </html>
