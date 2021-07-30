@@ -1,11 +1,11 @@
 mod server;
 
+use std::thread;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{self, BufRead, Write};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
-use subprocess::{Popen, PopenConfig};
 use structopt::StructOpt;
 use uuid::Uuid;
 
@@ -71,22 +71,26 @@ fn start_server(host: String, port: u16) {
 }
 
 
-fn setup_session(data_dir_path: String, tull_meta_dir: String, host: String, port: u16) {
-    let log_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(format!("{}/server.log", tull_meta_dir))
-        .unwrap();
+fn start_server_if_not_exists(tull_meta_dir: String, host: String, port: u16) {
+    if let Err(_result) = reqwest::blocking::get(format!("http://{}:{}/tull/api", host, port)) {
+        let _log_file = OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(format!("{}/server.log", tull_meta_dir))
+            .unwrap();
 
-    if let Err(_e) = Popen::create(&["cargo", "run", "--", "--start", "--host", &host, "--port", port.to_string().as_str()], PopenConfig {
-        stdout: subprocess::Redirection::File(log_file),
-        detached: true,
-        ..Default::default()
-    }) {
-        println!("Couldn't start the web server.");
-    };
+        thread::spawn(move || {
+            start_server(host, port);
+        });
+    }
+}
 
+
+fn setup_session(data_dir_path: &String) {
     let session_id = get_session_id().unwrap();
+
+    println!("\nAccess the session using this id: {}\n", session_id);
+
     let session_file_path = format!("{}/{}", data_dir_path, session_id);
     let mut session_file = OpenOptions::new()
         .write(true)
@@ -129,7 +133,16 @@ fn main() {
     }
 
     if args.start {
-        start_server(args.host.clone(), args.port.clone());
+        if let Err(_e) = setup_data_directories(&tull_data_dir, &tull_meta_dir) {
+            println!("Failed to create the data directories.");
+        }
+
+        println!("API: {}", format!("http://{}:{}/tull/api", args.host, args.port));
+        println!("Web: {}", format!("http://{}:{}/tull/web", args.host, args.port));
+        println!("Raw: {}", format!("http://{}:{}/tull/raw", args.host, args.port));
+
+        start_server_if_not_exists(tull_meta_dir, args.host, args.port);
+        setup_session(&tull_data_dir);
     }
 
     if args.stop {
