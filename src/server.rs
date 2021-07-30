@@ -35,16 +35,18 @@ where
 
 #[tokio::main]
 pub async fn run_server(socket: SocketAddr) {
+    let mut hb = Handlebars::new();
+    hb.register_template_file("session-list.html", "./src/templates/session-list.hbs").unwrap();
+    hb.register_template_file("session-log.html", "./src/templates/session-log.hbs").unwrap();
+
+    let hb = Arc::new(hb);
+    let handlebars = move |with_template| render(with_template, hb.clone());
+
     fn get_data_dir_path() -> String {
         let user_home = home_dir().unwrap().to_owned();
         let user_home_str = user_home.to_str().unwrap();
         format!("{}/{}", user_home_str, ".tull/data")
     }
-
-    let mut hb = Handlebars::new();
-    hb.register_template_file("session-list.html", "./src/templates/session-list.hbs").unwrap();
-    let hb = Arc::new(hb);
-    let handlebars = move |with_template| render(with_template, hb.clone());
 
     let session_list_web = warp::path!("tull" / "web")
         .map(|| {
@@ -62,27 +64,31 @@ pub async fn run_server(socket: SocketAddr) {
                 value: json!({"session_ids": session_ids}),
             }
         })
-        .map(handlebars);
+        .map(handlebars.clone());
 
     let session_logs_web = warp::path!("tull" / "web" / String)
         .map(|session_id| {
             let file_path = format!("{}/{}", get_data_dir_path(), session_id);
             let file_exists = Path::new(&file_path).exists();
             if !file_exists {
-                warp::reply::html("Whatever you are looking for, is long gone!".to_string())
+                WithTemplate {
+                    name: "session-log.html",
+                    value: json!({"logs": []}),
+                }
             } else {
-                let file_contents: String = fs::read_to_string(file_path)
+                let file_contents: Vec<String> = fs::read_to_string(file_path)
                     .unwrap()
                     .split("\n")
-                    .map(|line: &str| format!("<span>{}</span>", line))
-                    .collect::<Vec<String>>()
-                    .join("<br />");
+                    .map(|line: &str| line.to_string())
+                    .collect::<Vec<String>>();
 
-                let mut logs_html = "<script>setInterval(() => { window.location.reload() }, 5000);</script>".to_string();
-                logs_html.push_str(&file_contents.to_string());
-                warp::reply::html(logs_html)
+                WithTemplate {
+                    name: "session-log.html",
+                    value: json!({"logs": file_contents}),
+                }
             }
-        });
+        })
+        .map(handlebars.clone());
 
     let session_list_api = warp::path!("tull" / "api")
         .map(|| {
