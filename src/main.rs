@@ -14,9 +14,6 @@ use home::home_dir;
 
 #[derive(StructOpt)]
 struct Cli {
-    #[structopt(short, long)]
-    web: bool,
-
     #[structopt(long)]
     start: bool,
 
@@ -119,14 +116,22 @@ fn setup_session(data_dir_path: &String) {
 }
 
 
-fn main() {
-    let args = Cli::from_args();
+fn list_sessions(data_dir_path: &String) {
+    let files = fs::read_dir(data_dir_path).unwrap();
 
-    if args.web {
-        println!("TULL_API_URL: {}", format!("http://{}:{}/tull/api", args.host, args.port));
-        println!("TULL_WEB_URL: {}", format!("http://{}:{}/tull/web", args.host, args.port));
-        println!("TULL_RAW_URL: {}", format!("http://{}:{}/tull/raw", args.host, args.port));
+    for file in files {
+        println!("{}", file.unwrap().file_name().to_str().unwrap());
     }
+}
+
+
+fn main() {
+    let user_home = home_dir().unwrap().to_owned();
+    let user_home_str = user_home.to_str().unwrap();
+    let tull_data_dir = format!("{}/{}", user_home_str, ".tull/data");
+    let tull_meta_dir = format!("{}/{}", user_home_str, ".tull/meta");
+
+    let args = Cli::from_args();
 
     if args.status {
         println!("check API status");
@@ -150,17 +155,10 @@ fn main() {
     }
 
     if args.ls {
-        println!("list session ids");
+        list_sessions(&tull_data_dir);
     }
 
-    let user_home = home_dir().unwrap().to_owned();
-    let user_home_str = user_home.to_str().unwrap();
-    let tull_data_dir = format!("{}/{}", user_home_str, ".tull/data");
-    let tull_meta_dir = format!("{}/{}", user_home_str, ".tull/meta");
+    if args.follow != None {}
 
-    if let Err(_e) = setup_data_directories(&tull_data_dir, &tull_meta_dir) {
-        println!("Failed to create the data directories.");
-    }
-
-    setup_session(tull_data_dir, tull_meta_dir, args.host, args.port);
+    if args.reopen != None {}
 }
