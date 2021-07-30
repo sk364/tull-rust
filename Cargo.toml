@@ -2,7 +2,7 @@
 name = "tull-rust"
 authors = ["Sachin Kukreja <sk364@gmail.com>"]
 description = "Teleport Your Logs with Love"
-version = "0.1.0"
+version = "0.2.0"
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/sk364/tull-rust"
