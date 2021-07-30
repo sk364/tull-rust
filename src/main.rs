@@ -12,7 +12,7 @@ use uuid::Uuid;
 use home::home_dir;
 
 
-#[derive(StructOpt)]
+#[derive(Debug, StructOpt)]
 struct Cli {
     #[structopt(long)]
     start: bool,
@@ -48,9 +48,9 @@ fn setup_data_directories(data_dir_path: &String, meta_dir_path: &String) -> Res
 }
 
 
-fn get_session_id() -> Result<String, io::Error> {
+fn get_session_id() -> Result<Option<String>, io::Error> {
     let my_uuid = Uuid::new_v4().to_string();
-    Ok(my_uuid)
+    Ok(Some(my_uuid))
 }
 
 
@@ -68,7 +68,7 @@ fn start_server(host: String, port: u16) {
 }
 
 
-fn start_server_if_not_exists(tull_meta_dir: String, host: String, port: u16) {
+fn start_server_if_not_exists(tull_meta_dir: &String, host: String, port: u16) {
     if let Err(_result) = reqwest::blocking::get(format!("http://{}:{}/tull/api", host, port)) {
         let _log_file = OpenOptions::new()
             .write(true)
@@ -83,15 +83,18 @@ fn start_server_if_not_exists(tull_meta_dir: String, host: String, port: u16) {
 }
 
 
-fn setup_session(data_dir_path: &String) {
-    let session_id = get_session_id().unwrap();
+fn setup_session(data_dir_path: &String, sid: std::option::Option<String>) {
+    let session_id = match sid {
+        None => get_session_id().unwrap().unwrap(),
+        Some(id) => id
+    };
 
     println!("\nAccess the session using this id: {}\n", session_id);
 
     let session_file_path = format!("{}/{}", data_dir_path, session_id);
     let mut session_file = OpenOptions::new()
-        .write(true)
-        .create_new(true)
+        .append(true)
+        .create(true)
         .open(session_file_path.clone())
         .unwrap();
 
@@ -113,6 +116,26 @@ fn setup_session(data_dir_path: &String) {
             println!("Couldn't remove the session file.");
         }
     }
+}
+
+
+fn setup_and_start_server(
+    session_id: Option<String>,
+    data_dir_path: &String,
+    meta_dir_path: &String,
+    host: String,
+    port: u16
+) {
+    if let Err(_e) = setup_data_directories(&data_dir_path, &meta_dir_path) {
+        println!("Failed to create the data directories.");
+    }
+
+    println!("API: {}", format!("http://{}:{}/tull/api", host, port));
+    println!("Web: {}", format!("http://{}:{}/tull/web", host, port));
+    println!("Raw: {}", format!("http://{}:{}/tull/raw", host, port));
+
+    start_server_if_not_exists(meta_dir_path, host, port);
+    setup_session(&data_dir_path, session_id);
 }
 
 
@@ -152,16 +175,7 @@ fn main() {
     }
 
     if args.start {
-        if let Err(_e) = setup_data_directories(&tull_data_dir, &tull_meta_dir) {
-            println!("Failed to create the data directories.");
-        }
-
-        println!("API: {}", format!("http://{}:{}/tull/api", args.host, args.port));
-        println!("Web: {}", format!("http://{}:{}/tull/web", args.host, args.port));
-        println!("Raw: {}", format!("http://{}:{}/tull/raw", args.host, args.port));
-
-        start_server_if_not_exists(tull_meta_dir, args.host, args.port);
-        setup_session(&tull_data_dir);
+        setup_and_start_server(None, &tull_data_dir, &tull_meta_dir, args.host.clone(), args.port);
     }
 
     if args.stop {
@@ -174,5 +188,7 @@ fn main() {
 
     if args.follow != None {}
 
-    if args.reopen != None {}
+    if args.reopen != None {
+        setup_and_start_server(args.reopen, &tull_data_dir, &tull_meta_dir, args.host, args.port);
+    }
 }
