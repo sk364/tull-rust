@@ -125,6 +125,15 @@ fn list_sessions(data_dir_path: &String) {
 }
 
 
+fn check_api_status(host: &String, port: u16) -> bool {
+    if let Ok(_res) = reqwest::blocking::get(format!("http://{}:{}/tull/api", host, port)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
 fn main() {
     let user_home = home_dir().unwrap().to_owned();
     let user_home_str = user_home.to_str().unwrap();
@@ -134,7 +143,12 @@ fn main() {
     let args = Cli::from_args();
 
     if args.status {
-        println!("check API status");
+        let is_api_alive = check_api_status(&args.host, args.port);
+        if is_api_alive {
+            println!("API is alive!");
+        } else {
+            println!("API is down. Use --start option.");
+        }
     }
 
     if args.start {
